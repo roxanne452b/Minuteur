@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>⏱️ Mon Minuteur Visuel — Time Timer & Routines</title>
+  <style>
+    :root {
+      --bg-color: #fbf9f4;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --disk-color: #2096ed;
+      --border-color: #e2e8f0;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --shadow-sm: 0 4px 12px rgba(0,0,0,0.05);
+      --shadow-lg: 0 12px 28px rgba(0,0,0,0.12);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
+    input, select { user-select: text; -webkit-user-select: text; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-color); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 12px 16px; touch-action: manipulation; }
+    header { width: 100%; max-width: 420px; display: flex; justify-content: space-between; align-items: center; padding: 6px 4px 12px 4px; }
+    h1 { font-size: 1.35rem; font-weight: 900; letter-spacing: -0.02em; color: var(--text-main); }
+    .header-actions { display: flex; gap: 8px; align-items: center; }
+    .btn-badge { background-color: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; padding: 8px 14px; border-radius: 999px; font-weight: 800; font-size: 0.78rem; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+    .btn-icon-setting { background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 8px 12px; border-radius: 999px; font-weight: 800; font-size: 0.85rem; cursor: pointer; }
+    .sync-dot { width: 10px; height: 10px; border-radius: 50%; background: #cbd5e1; display: inline-block; }
+    .sync-dot.on { background: #10b981; }
+    .sync-dot.busy { background: #f59e0b; }
+    .sync-dot.err { background: #ef4444; }
+    .banner-container { width: 100%; max-width: 420px; margin-bottom: 8px; }
+    .banner { background-color: var(--card-bg); border: 1.5px solid var(--border-color); border-radius: var(--radius-lg); padding: 10px; display: flex; gap: 8px; box-shadow: var(--shadow-sm); }
+    .banner-box { flex: 1; padding: 8px 12px; border-radius: var(--radius-md); text-align: center; overflow: hidden; }
+    .banner-now { background-color: var(--disk-color); color: #ffffff; }
+    .banner-next { background-color: #f8fafc; color: #334155; border: 1px solid #cbd5e1; }
+    .banner-label { font-size: 0.65rem; text-transform: uppercase; font-weight: 900; letter-spacing: 0.6px; display: block; margin-bottom: 2px; opacity: 0.9; }
+    .banner-value { font-size: 0.85rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; justify-content: center; gap: 4px; }
+    main { width: 100%; max-width: 400px; display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; }
+    .dial-wrapper { width: 100%; display: flex; justify-content: center; align-items: center; }
+    .dial-svg { width: 100%; height: auto; max-width: 380px; touch-action: none; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.08)); cursor: pointer; }
+    .digital-clock { font-size: 3.2rem; font-weight: 900; letter-spacing: 1px; color: var(--text-main); margin-top: 10px; font-variant-numeric: tabular-nums; }
+    footer { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 12px; padding-top: 6px; }
+    .nav-steps { display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); padding: 10px 16px; border-radius: var(--radius-lg); border: 1px solid var(--border-color); font-size: 0.8rem; font-weight: 800; color: var(--text-muted); box-shadow: var(--shadow-sm); }
+    .btn-step-nav { background: none; border: none; color: #0284c7; font-weight: 800; font-size: 0.82rem; cursor: pointer; padding: 4px 8px; }
+    .btn-step-nav:disabled { opacity: 0.3; cursor: default; }
+    .controls-main { display: flex; gap: 10px; width: 100%; }
+    .btn-primary { flex: 2; padding: 15px; border-radius: var(--radius-lg); border: none; font-weight: 900; font-size: 1.05rem; color: #ffffff; cursor: pointer; box-shadow: 0 4px 14px rgba(32, 150, 237, 0.3); display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .btn-start { background-color: var(--disk-color); }
+    .btn-pause { background-color: #f59e0b; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3); }
+    .btn-ctrl-icon { background-color: var(--card-bg); border: 1px solid var(--border-color); padding: 12px 16px; border-radius: var(--radius-lg); font-weight: 800; font-size: 0.95rem; color: var(--text-main); cursor: pointer; box-shadow: var(--shadow-sm); }
+    .presets-scroll { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; width: 100%; scrollbar-width: none; }
+    .presets-scroll::-webkit-scrollbar { display: none; }
+    .btn-preset { background-color: var(--card-bg); border: 1px solid var(--border-color); padding: 8px 14px; border-radius: var(--radius-md); font-size: 0.78rem; font-weight: 800; color: #334155; white-space: nowrap; cursor: pointer; }
+    .btn-preset.active { background-color: #e0f2fe; border-color: #0284c7; color: #0284c7; }
+    .btn-google { background: #fff; border: 1px solid #cbd5e1; color: #1f2937; padding: 10px 14px; border-radius: var(--radius-md); font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn-google:disabled { opacity: 0.5; cursor: default; }
+    .sync-status { font-size: 0.75rem; color: #64748b; font-weight: 600; line-height: 1.4; }
+    .sync-help { font-size: 0.7rem; color: #94a3b8; line-height: 1.4; }
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.45); backdrop-filter: blur(4px); display: flex; align-items: flex-end; justify-content: center; z-index: 200; }
+    @media (min-width: 480px) { .modal-overlay { align-items: center; padding: 16px; } }
+    .modal-card { background: #ffffff; border-top-left-radius: 28px; border-top-right-radius: 28px; padding: 20px 22px; width: 100%; max-width: 440px; max-height: 85vh; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; box-shadow: var(--shadow-lg); }
+    @media (min-width: 480px) { .modal-card { border-radius: 28px; } }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; }
+    .modal-title { font-weight: 900; font-size: 1.15rem; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
+    .btn-close { border: none; background: #f1f5f9; width: 32px; height: 32px; border-radius: 50%; font-size: 1rem; font-weight: 800; color: #64748b; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .form-section { display: flex; flex-direction: column; gap: 8px; }
+    .form-label { font-size: 0.8rem; font-weight: 800; color: #475569; }
+    .input-text { width: 100%; padding: 10px 14px; border-radius: var(--radius-md); border: 1px solid var(--border-color); font-size: 0.85rem; font-weight: 600; background-color: #f8fafc; outline: none; }
+    .color-dots-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .color-dot { width: 36px; height: 36px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; }
+    .color-dot.selected { border-color: #0f172a; transform: scale(1.15); }
+    .routine-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: var(--radius-md); padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .btn-sm-run { background-color: #0ea5e9; color: #ffffff; border: none; padding: 6px 12px; border-radius: var(--radius-md); font-weight: 800; font-size: 0.75rem; cursor: pointer; }
+    .btn-sm-del { background: none; border: none; color: #ef4444; padding: 6px; cursor: pointer; font-size: 0.85rem; }
+    .toggle-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; font-weight: 700; color: #334155; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>⏱️ Mon minuteur</h1>
+    <div class="header-actions">
+      <span id="sync-dot" class="sync-dot" title="Synchronisation Google"></span>
+      <button class="btn-badge" onclick="openModal('routines')">✨ Routines</button>
+      <button class="btn-icon-setting" onclick="openModal('settings')">⚙️</button>
+    </div>
+  </header>
+
+  <div id="banner-container" class="banner-container" style="display:none;">
+    <div class="banner">
+      <div id="banner-now-box" class="banner-box banner-now">
+        <span class="banner-label">Maintenant</span>
+        <div id="banner-now-text" class="banner-value">--</div>
+      </div>
+      <div class="banner-box banner-next">
+        <span class="banner-label">Ensuite</span>
+        <div id="banner-next-text" class="banner-value">--</div>
+      </div>
+    </div>
+  </div>
+
+  <main>
+    <div class="dial-wrapper">
+      <svg id="dial-svg" class="dial-svg" viewBox="0 0 500 500">
+        <rect id="frame-rect" x="6" y="6" width="488" height="488" rx="60" fill="#2096ed" />
+        <rect x="22" y="22" width="456" height="456" rx="48" fill="#ffffff" />
+        <g id="dial-emojis"></g>
+        <g id="dial-ticks"></g>
+        <g id="dial-numbers"></g>
+        <circle cx="250" cy="250" r="150" fill="#ffffff" stroke="#e2e8f0" stroke-width="2" />
+        <path id="dial-disk" d="" fill="#2096ed" opacity="0.9" />
+        <circle cx="250" cy="250" r="34" fill="#ffffff" style="filter: drop-shadow(0px 3px 6px rgba(0,0,0,0.16));" />
+        <text id="dial-center-emoji" x="250" y="250" font-size="36" text-anchor="middle" dominant-baseline="central">⏱️</text>
+      </svg>
+    </div>
+    <div id="digital-clock" class="digital-clock">05:00</div>
+  </main>
+
+  <footer>
+    <div id="nav-steps" class="nav-steps" style="display:none;">
+      <button id="btn-prev-step" class="btn-step-nav" onclick="prevStep()">← Étape préc.</button>
+      <span id="step-indicator">Étape 1 sur 1</span>
+      <button id="btn-next-step" class="btn-step-nav" onclick="nextStep()">Étape suiv. →</button>
+    </div>
+
+    <div class="controls-main">
+      <button id="btn-toggle" class="btn-primary btn-start" onclick="toggleTimer()">
+        <span>▶</span> <span>Démarrer</span>
+      </button>
+      <button class="btn-ctrl-icon" onclick="resetTimer()">🔄</button>
+      <button class="btn-ctrl-icon" onclick="addMinute()">+1 min</button>
+    </div>
+
+    <div class="presets-scroll" id="presets">
+      <button class="btn-preset" data-min="1" onclick="setMinutes(1)">1 min</button>
+      <button class="btn-preset" data-min="2" onclick="setMinutes(2)">2 min</button>
+      <button class="btn-preset active" data-min="5" onclick="setMinutes(5)">5 min</button>
+      <button class="btn-preset" data-min="10" onclick="setMinutes(10)">10 min</button>
+      <button class="btn-preset" data-min="15" onclick="setMinutes(15)">15 min</button>
+      <button class="btn-preset" data-min="20" onclick="setMinutes(20)">20 min</button>
+      <button class="btn-preset" data-min="30" onclick="setMinutes(30)">30 min</button>
+      <button class="btn-preset" data-min="45" onclick="setMinutes(45)">45 min</button>
+      <button class="btn-preset" data-min="60" onclick="setMinutes(60)">60 min</button>
+    </div>
+  </footer>
+
+  <!-- MODALE ROUTINES -->
+  <div id="modal-routines" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal('routines')">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">⭐ Mes Routines & Étapes</div>
+        <button class="btn-close" onclick="closeModal('routines')">✕</button>
+      </div>
+      <div class="form-section">
+        <label class="form-label">Routines enregistrées</label>
+        <div id="routines-list"></div>
+      </div>
+      <div class="form-section" style="border-top:1px solid #f1f5f9; padding-top:12px;">
+        <label class="form-label">Ajouter une nouvelle routine</label>
+        <input type="text" id="new-routine-title" class="input-text" placeholder="Titre (ex: Routine de matin)" />
+        <input type="text" id="new-routine-steps" class="input-text" placeholder="Étapes (ex: Habillage 5, Déjeuner 10)" />
+        <button class="btn-primary btn-start" style="padding:10px; font-size:0.85rem;" onclick="createNewRoutine()">+ Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALE RÉGLAGES COMPLETS -->
+  <div id="modal-settings" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal('settings')">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">⚙️ Personnalisation & Paramètres</div>
+        <button class="btn-close" onclick="closeModal('settings')">✕</button>
+      </div>
+
+      <div class="form-section">
+        <label class="form-label">☁️ Synchronisation avec Google</label>
+        <div id="sync-status" class="sync-status">Non connecté</div>
+        <input type="text" id="google-client-id" class="input-text" placeholder="ID client Google (xxxx.apps.googleusercontent.com)" onchange="saveClientId(this.value)" />
+        <button id="btn-google-signin" class="btn-google" onclick="googleSignIn()">
+          <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.5 28.7c-.5-1.4-.8-2.9-.8-4.7s.3-3.2.8-4.7l-7.9-6.1C.9 16.4 0 20.100 0 24s.9 7.600 2.600 10.800l7.900-6.100z"/><path fill="#34A853" d="M24 48c6.500 0 11.900-2.100 15.900-5.800l-7.400-5.700c-2.100 1.400-4.800 2.300-8.500 2.300-6.300 0-11.600-4.100-13.500-9.800l-7.900 6.100C6.500 42.600 14.600 48 24 48z"/></svg>
+          <span id="btn-google-label">Se connecter avec Google</span>
+        </button>
+        <div style="display:flex; gap:8px;">
+          <button id="btn-sync-now" class="btn-preset" style="flex:1;" onclick="syncNow(true)" disabled>🔄 Synchroniser</button>
+          <button id="btn-google-signout" class="btn-preset" style="flex:1;" onclick="googleSignOut()" disabled>Se déconnecter</button>
+        </div>
+        <div class="sync-help">Sauvegarde vos routines et réglages dans un espace privé de votre Google Drive (invisible dans vos fichiers). Nécessite un ID client OAuth Google Cloud et un accès via http(s), pas file://.</div>
+        <label class="form-label" style="margin-top:10px;">💾 Sauvegarde manuelle (sans compte)</label>
+        <div style="display:flex; gap:8px;">
+          <button class="btn-preset" style="flex:1;" onclick="exportData()">⬇️ Exporter</button>
+          <button class="btn-preset" style="flex:1;" onclick="document.getElementById('import-file').click()">⬆️ Importer</button>
+        </div>
+        <input type="file" id="import-file" accept=".json,application/json" style="display:none;" onchange="importData(this)" />
+        <div id="backup-status" class="sync-help">Exporter crée un fichier que vous pouvez garder où vous voulez (Drive, courriel…). Importer le restaure sur un autre appareil.</div>
+      </div>
+
+      <div class="form-section">
+        <label class="form-label">Couleur du disque et du cadre</label>
+        <div class="color-dots-row">
+          <div class="color-dot selected" data-color="#2096ed" style="background:#2096ed;" onclick="changeColor('#2096ed')"></div>
+          <div class="color-dot" data-color="#10b981" style="background:#10b981;" onclick="changeColor('#10b981')"></div>
+          <div class="color-dot" data-color="#f59e0b" style="background:#f59e0b;" onclick="changeColor('#f59e0b')"></div>
+          <div class="color-dot" data-color="#ef4444" style="background:#ef4444;" onclick="changeColor('#ef4444')"></div>
+          <div class="color-dot" data-color="#ec4899" style="background:#ec4899;" onclick="changeColor('#ec4899')"></div>
+          <div class="color-dot" data-color="#8b5cf6" style="background:#8b5cf6;" onclick="changeColor('#8b5cf6')"></div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <label class="form-label">Temps maximum du cadran</label>
+        <div style="display:flex; gap:8px;">
+          <button class="btn-preset" onclick="setMaxMinutes(5)" style="flex:1;">5 min</button>
+          <button class="btn-preset" onclick="setMaxMinutes(60)" style="flex:1;">60 min</button>
+          <button class="btn-preset" onclick="setMaxMinutes(120)" style="flex:1;">120 min</button>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <label class="form-label">Images autour du cadran</label>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button class="btn-preset" onclick="changeEmojiPack('ocean')">🌊 Océan</button>
+          <button class="btn-preset" onclick="changeEmojiPack('ferme')">🐥 Ferme</button>
+          <button class="btn-preset" onclick="changeEmojiPack('espace')">🚀 Espace</button>
+          <button class="btn-preset" onclick="changeEmojiPack('fruits')">🍎 Fruits</button>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <label class="form-label">Son de fin</label>
+        <select id="sound-select" class="input-text" onchange="changeSound(this.value)">
+          <option value="carillon">Carillon doux</option>
+          <option value="bip">Bip classique</option>
+          <option value="cloche">Cloche</option>
+        </select>
+      </div>
+
+      <div class="form-section">
+        <div class="toggle-row">
+          <span>Afficher les chiffres</span>
+          <input type="checkbox" id="show-numbers" checked onchange="toggleDisplay('numbers', this.checked)" />
+        </div>
+        <div class="toggle-row">
+          <span>Afficher les images</span>
+          <input type="checkbox" id="show-images" checked onchange="toggleDisplay('images', this.checked)" />
+        </div>
+        <div class="toggle-row">
+          <span>Afficher le temps numérique</span>
+          <input type="checkbox" id="show-digital" checked onchange="toggleDisplay('digital', this.checked)" />
+        </div>
+        <div class="toggle-row">
+          <span>Enchaîner les étapes automatiquement</span>
+          <input type="checkbox" id="auto-next" onchange="toggleDisplay('autoNext', this.checked)" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ===================== DONNÉES ===================== */
+    const PACKS = {
+      ocean: ["🐬", "🐙", "🐢", "🐠", "🐳", "🦀", "🐟", "🦈", "🐚", "🦑", "🐡", "🌊"],
+      ferme: ["🐮", "🐷", "🐔", "🐥", "🐴", "🐑", "🐶", "🐱", "🐰", "🦆", "🚜", "🌽"],
+      espace: ["🚀", "🪐", "🌟", "👾", "🛸", "🌙", "☄️", "👨‍🚀", "🛰️", "👽", "🌍", "☀️"],
+      fruits: ["🍎", "🍌", "🍓", "🍊", "🍇", "🍉", "🍍", "🍒", "🥝", "🍑", "🍋", "🍐"]
+    };
+
+    const DEFAULT_ROUTINES = [
+      {
+        id: "rout_1",
+        label: "Routine du soir",
+        steps: [
+          { label: "Préparer le bain", minutes: 3, emoji: "🛁" },
+          { label: "Prendre le bain", minutes: 10, emoji: "🧼" },
+          { label: "Mettre le pyjama", minutes: 5, emoji: "👕" },
+          { label: "Boire le biberon", minutes: 5, emoji: "🍼" },
+          { label: "Aller au lit", minutes: 2, emoji: "🛏️" }
+        ]
+      }
+    ];
+
+    const SETTINGS_KEY = "vt_settings_v1";
+    const ROUTINES_KEY = "vt_routines_v3";
+    const META_KEY = "vt_meta_v1";
+
+    function readJSON(key) {
+      try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : null; } catch (e) { return null; }
+    }
+    function writeJSON(key, val) {
+      try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
+    }
+    function esc(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
+    let settings = Object.assign(
+      { color: "#2096ed", pack: "ocean", max: 60, sound: "carillon", numbers: true, images: true, digital: true, autoNext: false },
+      readJSON(SETTINGS_KEY) || {}
+    );
+    let meta = Object.assign({ updatedAt: 0, clientId: "", connected: false, email: "" }, readJSON(META_KEY) || {});
+    let routinesList = readJSON(ROUTINES_KEY) || JSON.parse(JSON.stringify(DEFAULT_ROUTINES));
+
+    /* ===================== ÉTAT ===================== */
+    let currentEmojis = PACKS[settings.pack] || PACKS.ocean;
+    let maxMinutes = settings.max;
+    let durationMs = 5 * 60 * 1000;
+    let remainingMs = 5 * 60 * 1000;
+    let isRunning = false;
+    let timerInterval = null;
+    let endAt = 0;
+    let currentEmoji = "⏱️";
+    let diskColor = settings.color;
+    let soundType = settings.sound;
+    let showNumbersFlag = settings.numbers;
+    let showImagesFlag = settings.images;
+    let showDigitalFlag = settings.digital;
+    let activeSteps = null;
+    let currentStepIdx = 0;
+
+    /* ===================== PERSISTANCE + SYNC ===================== */
+    function saveLocal() {
+      writeJSON(SETTINGS_KEY, settings);
+      writeJSON(ROUTINES_KEY, routinesList);
+      writeJSON(META_KEY, meta);
+    }
+    // À appeler à chaque modification de données utilisateur
+    function touchData() {
+      meta.updatedAt = Date.now();
+      saveLocal();
+      scheduleSync();
+    }
+
+    /* ===================== GÉOMÉTRIE ===================== */
+    function polar(cx, cy, r, angleDeg) {
+      const rad = ((angleDeg - 90) * Math.PI) / 180;
+      return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+    }
+
+    function sectorPath(cx, cy, r, angleDeg) {
+      if (angleDeg <= 0) return "";
+      const clampedAngle = Math.min(angleDeg, 359.99);
+      const start = polar(cx, cy, r, 0);
+      const end = polar(cx, cy, r, clampedAngle);
+      const largeArc = clampedAngle > 180 ? 1 : 0;
+      return `M ${cx} ${cy} L ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${end.x} ${end.y} Z`;
+    }
+
+    let dialBound = false;
+    let dragging = false;
+
+    function handlePointer(e) {
+      const svg = document.getElementById("dial-svg");
+      const rect = svg.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 500 - 250;
+      const y = ((e.clientY - rect.top) / rect.height) * 500 - 250;
+      let deg = (Math.atan2(y, x) * 180 / Math.PI) + 90;
+      if (deg < 0) deg += 360;
+      const targetMs = (deg / 360) * (maxMinutes * 60 * 1000);
+      durationMs = Math.max(0, Math.min(targetMs, maxMinutes * 60 * 1000));
+      remainingMs = durationMs;
+      if (isRunning) pauseTimer();
+      activeSteps = null;
+      updatePresetActive(null);
+      updateUI();
+    }
+
+    function initDial() {
+      const gEmojis = document.getElementById("dial-emojis");
+      gEmojis.innerHTML = showImagesFlag ? currentEmojis.map((e, i) => {
+        const p = polar(250, 250, 206, i * 30);
+        return `<text x="${p.x}" y="${p.y}" font-size="32" text-anchor="middle" dominant-baseline="central">${e}</text>`;
+      }).join("") : "";
+
+      const gTicks = document.getElementById("dial-ticks");
+      let ticksHtml = "";
+      const ticksCount = maxMinutes === 5 ? 60 : maxMinutes;
+      for (let i = 0; i < ticksCount; i++) {
+        const a = (i / ticksCount) * 360;
+        const isBig = maxMinutes === 5 ? i % 12 === 0 : i % 5 === 0;
+        const p1 = polar(250, 250, 154, a);
+        const p2 = polar(250, 250, 150 + (isBig ? 18 : 10), a);
+        ticksHtml += `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="#334155" stroke-width="${isBig ? 3.5 : 1.5}" stroke-linecap="round"/>`;
+      }
+      gTicks.innerHTML = ticksHtml;
+
+      const marks = maxMinutes === 5 ? [1, 2, 3, 4, 5] : (maxMinutes === 120 ? [10,20,30,40,50,60,70,80,90,100,110,120] : [5,10,15,20,25,30,35,40,45,50,55,60]);
+      const gNumbers = document.getElementById("dial-numbers");
+      gNumbers.innerHTML = showNumbersFlag ? marks.map(v => {
+        const p = polar(250, 250, 182, (v / maxMinutes) * 360);
+        return `<text x="${p.x}" y="${p.y}" text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="800" fill="#0f172a">${v}</text>`;
+      }).join("") : "";
+
+      // Masquer les préréglages plus grands que le maximum du cadran
+      document.querySelectorAll("#presets .btn-preset").forEach(btn => {
+        btn.style.display = (parseInt(btn.dataset.min, 10) > maxMinutes) ? "none" : "";
+      });
+
+      if (!dialBound) {
+        const svg = document.getElementById("dial-svg");
+        svg.addEventListener("pointerdown", (e) => { dragging = true; handlePointer(e); });
+        window.addEventListener("pointermove", (e) => { if (dragging) handlePointer(e); });
+        window.addEventListener("pointerup", () => { dragging = false; });
+        window.addEventListener("pointercancel", () => { dragging = false; });
+        dialBound = true;
+      }
+
+      renderRoutinesList();
+      updateUI();
+    }
+
+    function updateUI() {
+      const totalMs = maxMinutes * 60 * 1000;
+      const angle = (Math.max(0, Math.min(remainingMs, totalMs)) / totalMs) * 360;
+      document.getElementById("dial-disk").setAttribute("d", sectorPath(250, 250, 150, angle));
+      document.getElementById("dial-disk").setAttribute("fill", diskColor);
+      document.getElementById("frame-rect").setAttribute("fill", diskColor);
+      document.getElementById("banner-now-box").style.backgroundColor = diskColor;
+      document.documentElement.style.setProperty("--disk-color", diskColor);
+
+      const totalSec = Math.ceil(remainingMs / 1000);
+      const mins = Math.floor(totalSec / 60);
+      const secs = totalSec % 60;
+      const clockEl = document.getElementById("digital-clock");
+      clockEl.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      clockEl.style.display = showDigitalFlag ? "block" : "none";
+
+      document.getElementById("dial-center-emoji").textContent = currentEmoji;
+
+      const btnToggle = document.getElementById("btn-toggle");
+      if (isRunning) {
+        btnToggle.innerHTML = "<span>⏸</span> <span>Pause</span>";
+        btnToggle.className = "btn-primary btn-pause";
+      } else {
+        btnToggle.innerHTML = "<span>▶</span> <span>Démarrer</span>";
+        btnToggle.className = "btn-primary btn-start";
+      }
+
+      const bannerContainer = document.getElementById("banner-container");
+      const navSteps = document.getElementById("nav-steps");
+      if (activeSteps && activeSteps.length > 0) {
+        bannerContainer.style.display = "block";
+        navSteps.style.display = "flex";
+        const cur = activeSteps[currentStepIdx];
+        const nxt = activeSteps[currentStepIdx + 1];
+        document.getElementById("banner-now-text").textContent = `${cur.emoji || '🎯'} ${cur.label}`;
+        document.getElementById("banner-next-text").textContent = nxt ? `${nxt.emoji || '🎯'} ${nxt.label}` : "🎉 Fini !";
+        document.getElementById("step-indicator").textContent = `Étape ${currentStepIdx + 1} sur ${activeSteps.length}`;
+        document.getElementById("btn-prev-step").disabled = (currentStepIdx === 0);
+      } else {
+        bannerContainer.style.display = "none";
+        navSteps.style.display = "none";
+      }
+    }
+
+    /* ===================== MINUTEUR ===================== */
+    // Règle la durée sans toucher à la routine active
+    function setTimerMinutes(m) {
+      m = Math.max(0, Math.min(m, maxMinutes));
+      durationMs = m * 60 * 1000;
+      remainingMs = durationMs;
+      if (isRunning) pauseTimer();
+      updatePresetActive(m);
+      updateUI();
+    }
+
+    // Appelé par les boutons de préréglage : quitte le mode routine
+    function setMinutes(m) {
+      activeSteps = null;
+      currentEmoji = "⏱️";
+      setTimerMinutes(m);
+    }
+
+    function updatePresetActive(m) {
+      document.querySelectorAll("#presets .btn-preset").forEach(btn => {
+        if (m !== null && parseInt(btn.dataset.min, 10) === m) btn.classList.add("active");
+        else btn.classList.remove("active");
+      });
+    }
+
+    function toggleTimer() {
+      if (isRunning) pauseTimer();
+      else startTimer();
+    }
+
+    function startTimer() {
+      if (remainingMs <= 0) return;
+      isRunning = true;
+      endAt = Date.now() + remainingMs;
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        remainingMs = Math.max(0, endAt - Date.now());
+        if (remainingMs <= 0) {
+          pauseTimer();
+          playAudioSignal();
+          if (navigator.vibrate) { try { navigator.vibrate([200, 100, 200]); } catch (e) {} }
+          if (activeSteps && settings.autoNext) {
+            setTimeout(() => { nextStep(); if (activeSteps) startTimer(); }, 1200);
+          }
+        }
+        updateUI();
+      }, 100);
+      updateUI();
+    }
+
+    function pauseTimer() {
+      isRunning = false;
+      clearInterval(timerInterval);
+      updateUI();
+    }
+
+    function resetTimer() {
+      pauseTimer();
+      remainingMs = durationMs;
+      updateUI();
+    }
+
+    function addMinute() {
+      const maxMs = maxMinutes * 60 * 1000;
+      remainingMs = Math.min(remainingMs + 60 * 1000, maxMs);
+      durationMs = Math.max(durationMs, remainingMs);
+      if (isRunning) endAt = Date.now() + remainingMs;
+      updatePresetActive(null);
+      updateUI();
+    }
+
+    let audioCtx = null;
+    function playAudioSignal() {
+      try {
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === "suspended") audioCtx.resume();
+        const ctx = audioCtx;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = soundType === "bip" ? "square" : "sine";
+        osc.frequency.value = soundType === "cloche" ? 1200 : 523.25;
+        gain.gain.setValueAtTime(0.5, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.9);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.9);
+      } catch (e) {}
+    }
+
+    /* ===================== ROUTINES ===================== */
+    function renderRoutinesList() {
+      const container = document.getElementById("routines-list");
+      if (routinesList.length === 0) {
+        container.innerHTML = `<div style="font-size:0.8rem; color:#94a3b8; text-align:center; padding:10px;">Aucune routine enregistrée</div>`;
+        return;
+      }
+      container.innerHTML = routinesList.map((r, idx) => `
+        <div class="routine-item">
+          <div>
+            <div style="font-weight:800; font-size:0.9rem;">${esc(r.label)}</div>
+            <div style="font-size:0.75rem; color:#64748b;">${r.steps.length} étape(s)</div>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button class="btn-sm-run" onclick="launchRoutine(${idx})">Lancer ▶</button>
+            <button class="btn-sm-del" onclick="deleteRoutine(${idx})">🗑️</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function launchRoutine(idx) {
+      const r = routinesList[idx];
+      if (!r || !r.steps.length) return;
+      activeSteps = r.steps;
+      currentStepIdx = 0;
+      loadCurrentStep();
+      closeModal('routines');
+    }
+
+    function loadCurrentStep() {
+      if (!activeSteps) return;
+      const step = activeSteps[currentStepIdx];
+      currentEmoji = step.emoji || "🎯";
+      setTimerMinutes(step.minutes);
+    }
+
+    function nextStep() {
+      if (!activeSteps) return;
+      if (currentStepIdx + 1 < activeSteps.length) {
+        currentStepIdx++;
+        loadCurrentStep();
+      } else {
+        activeSteps = null;
+        currentEmoji = "🎉";
+        pauseTimer();
+        remainingMs = 0;
+        updateUI();
+      }
+    }
+
+    function prevStep() {
+      if (!activeSteps || currentStepIdx <= 0) return;
+      currentStepIdx--;
+      loadCurrentStep();
+    }
+
+    function createNewRoutine() {
+      const title = document.getElementById("new-routine-title").value.trim();
+      const rawSteps = document.getElementById("new-routine-steps").value.trim();
+      if (!title || !rawSteps) return;
+
+      const parsedSteps = rawSteps.split(",").map(s => s.trim()).filter(Boolean).map(s => {
+        const m = s.match(/^(.*?)\s*(\d+)?$/);
+        const name = (m && m[1]) ? m[1].trim() : "";
+        const mins = (m && m[2]) ? Math.max(1, parseInt(m[2], 10)) : 5;
+        return { label: name || "Étape", minutes: mins, emoji: "🎯" };
+      });
+      if (!parsedSteps.length) return;
+
+      routinesList.unshift({ id: "rout_" + Date.now(), label: title, steps: parsedSteps });
+      touchData();
+      renderRoutinesList();
+      document.getElementById("new-routine-title").value = "";
+      document.getElementById("new-routine-steps").value = "";
+    }
+
+    function deleteRoutine(idx) {
+      routinesList.splice(idx, 1);
+      touchData();
+      renderRoutinesList();
+    }
+
+    /* ===================== RÉGLAGES ===================== */
+    function changeColor(hex) {
+      diskColor = hex;
+      settings.color = hex;
+      refreshSettingsUI();
+      touchData();
+      updateUI();
+    }
+
+    function setMaxMinutes(m) {
+      maxMinutes = m;
+      settings.max = m;
+      touchData();
+      activeSteps = null;
+      currentEmoji = "⏱️";
+      initDial();
+      setTimerMinutes(Math.min(5, m));
+      closeModal('settings');
+    }
+
+    function changeEmojiPack(key) {
+      if (PACKS[key]) {
+        currentEmojis = PACKS[key];
+        settings.pack = key;
+        touchData();
+        initDial();
+        closeModal('settings');
+      }
+    }
+
+    function changeSound(v) {
+      soundType = v;
+      settings.sound = v;
+      touchData();
+      playAudioSignal();
+    }
+
+    function toggleDisplay(type, val) {
+      if (type === 'numbers') { showNumbersFlag = val; settings.numbers = val; }
+      if (type === 'images') { showImagesFlag = val; settings.images = val; }
+      if (type === 'digital') { showDigitalFlag = val; settings.digital = val; }
+      if (type === 'autoNext') { settings.autoNext = val; }
+      touchData();
+      initDial();
+    }
+
+    function refreshSettingsUI() {
+      document.querySelectorAll(".color-dot").forEach(dot => {
+        dot.classList.toggle("selected", dot.dataset.color === settings.color);
+      });
+      document.getElementById("sound-select").value = settings.sound;
+      document.getElementById("show-numbers").checked = settings.numbers;
+      document.getElementById("show-images").checked = settings.images;
+      document.getElementById("show-digital").checked = settings.digital;
+      document.getElementById("auto-next").checked = settings.autoNext;
+      document.getElementById("google-client-id").value = meta.clientId || "";
+    }
+
+    function openModal(name) { document.getElementById("modal-" + name).style.display = "flex"; }
+    function closeModal(name) { document.getElementById("modal-" + name).style.display = "none"; }
+
+    /* ===================== SYNCHRONISATION GOOGLE (Drive appDataFolder) ===================== */
+    const GOOGLE_SCOPE = "https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.email";
+    const DRIVE_FILE_NAME = "minuteur-visuel-data.json";
+    let accessToken = null;
+    let tokenExpiry = 0;
+    let driveFileId = null;
+    let syncTimer = null;
+    let syncing = false;
+
+    function setSyncStatus(state, text) {
+      const dot = document.getElementById("sync-dot");
+      dot.className = "sync-dot" + (state ? " " + state : "");
+      document.getElementById("sync-status").textContent = text;
+      const connected = !!meta.connected;
+      document.getElementById("btn-sync-now").disabled = !connected;
+      document.getElementById("btn-google-signout").disabled = !connected;
+      document.getElementById("btn-google-label").textContent = connected ? "Changer de compte Google" : "Se connecter avec Google";
+    }
+
+    function idleStatusText() {
+      if (!meta.connected) return "Non connecté";
+      return "Connecté" + (meta.email ? " : " + meta.email : "");
+    }
+
+    function loadGsi() {
+      return new Promise((resolve, reject) => {
+        if (window.google && google.accounts && google.accounts.oauth2) return resolve();
+        const s = document.createElement("script");
+        s.src = "https://accounts.google.com/gsi/client";
+        s.async = true;
+        s.onload = () => resolve();
+        s.onerror = () => reject(new Error("Impossible de charger Google (hors ligne ?)"));
+        document.head.appendChild(s);
+      });
+    }
+
+    function requestToken(prompt) {
+      return new Promise(async (resolve, reject) => {
+        try {
+          if (!meta.clientId) throw new Error("Entrez d'abord votre ID client Google.");
+          await loadGsi();
+          const client = google.accounts.oauth2.initTokenClient({
+            client_id: meta.clientId,
+            scope: GOOGLE_SCOPE,
+            callback: (resp) => {
+              if (resp.error) return reject(new Error(resp.error_description || resp.error));
+              accessToken = resp.access_token;
+              tokenExpiry = Date.now() + ((resp.expires_in || 3600) - 60) * 1000;
+              resolve(accessToken);
+            },
+            error_callback: (err) => reject(new Error(err && err.type ? err.type : "Connexion annulée"))
+          });
+          client.requestAccessToken({ prompt: prompt });
+        } catch (e) { reject(e); }
+      });
+    }
+
+    async function ensureToken(interactive) {
+      if (accessToken && Date.now() < tokenExpiry) return accessToken;
+      return requestToken(interactive ? "select_account" : "");
+    }
+
+    async function driveFetch(url, options, retry) {
+      const token = await ensureToken(false);
+      const opts = Object.assign({}, options);
+      opts.headers = Object.assign({}, opts.headers, { Authorization: "Bearer " + token });
+      const res = await fetch(url, opts);
+      if (res.status === 401 && !retry) {
+        accessToken = null;
+        return driveFetch(url, options, true);
+      }
+      if (!res.ok) throw new Error("Erreur Google Drive (" + res.status + ")");
+      return res;
+    }
+
+    async function findDriveFile() {
+      const q = encodeURIComponent("name='" + DRIVE_FILE_NAME + "'");
+      const res = await driveFetch("https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=" + q + "&fields=files(id,name)");
+      const data = await res.json();
+      return data.files && data.files.length ? data.files[0].id : null;
+    }
+
+    function buildPayload() {
+      return { version: 1, updatedAt: meta.updatedAt, settings: settings, routines: routinesList };
+    }
+
+    async function uploadToDrive() {
+      const body = JSON.stringify(buildPayload());
+      if (driveFileId) {
+        await driveFetch("https://www.googleapis.com/upload/drive/v3/files/" + driveFileId + "?uploadType=media", {
+          method: "PATCH", headers: { "Content-Type": "application/json" }, body: body
+        });
+      } else {
+        const boundary = "vtboundary" + Date.now();
+        const metadata = JSON.stringify({ name: DRIVE_FILE_NAME, parents: ["appDataFolder"], mimeType: "application/json" });
+        const multipart =
+          "--" + boundary + "\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n" + metadata + "\r\n" +
+          "--" + boundary + "\r\nContent-Type: application/json\r\n\r\n" + body + "\r\n" +
+          "--" + boundary + "--";
+        const res = await driveFetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id", {
+          method: "POST", headers: { "Content-Type": "multipart/related; boundary=" + boundary }, body: multipart
+        });
+        const data = await res.json();
+        driveFileId = data.id;
+      }
+    }
+
+    async function downloadFromDrive() {
+      const res = await driveFetch("https://www.googleapis.com/drive/v3/files/" + driveFileId + "?alt=media");
+      return res.json();
+    }
+
+    function applyRemote(remote) {
+      if (remote.settings && typeof remote.settings === "object") {
+        settings = Object.assign(settings, remote.settings);
+      }
+      if (Array.isArray(remote.routines)) routinesList = remote.routines;
+      meta.updatedAt = remote.updatedAt || Date.now();
+      saveLocal();
+      currentEmojis = PACKS[settings.pack] || PACKS.ocean;
+      maxMinutes = settings.max;
+      diskColor = settings.color;
+      soundType = settings.sound;
+      showNumbersFlag = settings.numbers;
+      showImagesFlag = settings.images;
+      showDigitalFlag = settings.digital;
+      activeSteps = null;
+      currentEmoji = "⏱️";
+      refreshSettingsUI();
+      initDial();
+      setTimerMinutes(Math.min(5, maxMinutes));
+    }
+
+    // Dernière modification gagnante (comparaison de updatedAt)
+    async function syncNow(interactive) {
+      if (syncing || !meta.connected) return;
+      syncing = true;
+      setSyncStatus("busy", "Synchronisation en cours…");
+      try {
+        await ensureToken(interactive);
+        if (!driveFileId) driveFileId = await findDriveFile();
+        let msg;
+        if (!driveFileId) {
+          if (!meta.updatedAt) meta.updatedAt = Date.now();
+          await uploadToDrive();
+          msg = "Données envoyées sur Google Drive";
+        } else {
+          const remote = await downloadFromDrive();
+          const remoteTs = (remote && remote.updatedAt) || 0;
+          if (remoteTs > meta.updatedAt) {
+            applyRemote(remote);
+            msg = "Données récupérées depuis Google Drive";
+          } else if (remoteTs < meta.updatedAt) {
+            await uploadToDrive();
+            msg = "Données envoyées sur Google Drive";
+          } else {
+            msg = "Déjà à jour";
+          }
+        }
+        saveLocal();
+        setSyncStatus("on", idleStatusText() + " — " + msg + " (" + new Date().toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" }) + ")");
+      } catch (e) {
+        setSyncStatus("err", "Échec : " + e.message + (interactive ? "" : " — appuyez sur Synchroniser."));
+      } finally {
+        syncing = false;
+      }
+    }
+
+    function scheduleSync() {
+      if (!meta.connected) return;
+      clearTimeout(syncTimer);
+      syncTimer = setTimeout(() => syncNow(false), 2500);
+    }
+
+    async function googleSignIn() {
+      if (!meta.clientId) {
+        setSyncStatus("err", "Entrez d'abord votre ID client Google ci-dessus.");
+        return;
+      }
+      setSyncStatus("busy", "Connexion à Google…");
+      try {
+        accessToken = null;
+        driveFileId = null;
+        await requestToken("select_account");
+        try {
+          const r = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", { headers: { Authorization: "Bearer " + accessToken } });
+          if (r.ok) meta.email = (await r.json()).email || "";
+        } catch (e) {}
+        meta.connected = true;
+        saveLocal();
+        await syncNow(true);
+      } catch (e) {
+        meta.connected = false;
+        saveLocal();
+        setSyncStatus("err", "Connexion impossible : " + e.message);
+      }
+    }
+
+    function googleSignOut() {
+      try {
+        if (accessToken && window.google && google.accounts && google.accounts.oauth2) {
+          google.accounts.oauth2.revoke(accessToken, () => {});
+        }
+      } catch (e) {}
+      accessToken = null;
+      driveFileId = null;
+      meta.connected = false;
+      meta.email = "";
+      saveLocal();
+      setSyncStatus("", "Non connecté");
+    }
+
+    function saveClientId(v) {
+      meta.clientId = v.trim();
+      saveLocal();
+    }
+
+    /* ===================== EXPORT / IMPORT MANUEL ===================== */
+    function setBackupStatus(text) {
+      document.getElementById("backup-status").textContent = text;
+    }
+
+    function exportData() {
+      try {
+        const payload = buildPayload();
+        if (!payload.updatedAt) payload.updatedAt = Date.now();
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        const d = new Date();
+        const stamp = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+        a.href = url;
+        a.download = "minuteur-sauvegarde-" + stamp + ".json";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        setBackupStatus("✅ Fichier exporté (" + routinesList.length + " routine(s)).");
+      } catch (e) {
+        setBackupStatus("❌ Export impossible : " + e.message);
+      }
+    }
+
+    function importData(input) {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result);
+          if (!data || !Array.isArray(data.routines)) throw new Error("fichier non reconnu");
+          const valid = data.routines.every(r => r && typeof r.label === "string" && Array.isArray(r.steps) &&
+            r.steps.every(s => s && typeof s.label === "string" && Number(s.minutes) > 0));
+          if (!valid) throw new Error("routines invalides");
+          if (!confirm("Remplacer vos routines et réglages actuels par ceux du fichier ?")) return;
+          data.routines.forEach(r => r.steps.forEach(s => { s.minutes = Number(s.minutes); }));
+          const incoming = { settings: data.settings, routines: data.routines, updatedAt: Date.now() };
+          applyRemote(incoming);
+          touchData();
+          setBackupStatus("✅ Importé : " + routinesList.length + " routine(s) restaurée(s).");
+        } catch (e) {
+          setBackupStatus("❌ Import impossible : " + e.message);
+        }
+        input.value = "";
+      };
+      reader.onerror = () => setBackupStatus("❌ Lecture du fichier impossible.");
+      reader.readAsText(file);
+    }
+
+    /* ===================== DÉMARRAGE ===================== */
+    window.onload = () => {
+      refreshSettingsUI();
+      initDial();
+      setTimerMinutes(Math.min(5, maxMinutes));
+      setSyncStatus(meta.connected ? "on" : "", idleStatusText() + (meta.connected ? " — appuyez sur Synchroniser pour reprendre." : ""));
+    };
+  </script>
+</body>
+</html>
